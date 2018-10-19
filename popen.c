@@ -4,67 +4,74 @@
 
 
 /***********************************************
- *
- *exec shell, return result and info if needed
- *
- *cmd: shell string, less than 128
- *buf: save shell print
- *len: buf len ptr, 
+ * @ 2018.10.19
+ * @ exec shell string and return result
+ * @ param1: shell string, less than 128
+ * @ param2: process every line
 ************************************************/
-
-int exec_shell(char *cmd, char *buf, int *len_ptr)
+int exec_shell(char *cmd, void (*func)(char *buf))
 {
     int ret = 0;
     FILE *fp = NULL;
-    char cmd_tmp[160] = "";
-    char buf_tmp[64] = "";
-    int buf_tmp_len = 0;
-    int buf_remain_len = *len_ptr - 1;
-    int buf_write_len = 0;
+    #define _BUF_TMP_LEN_  256
+    char buf_tmp[_BUF_TMP_LEN_] = {0};
+    int buf_tmp_index = 0;
+
+    int char_tmp = 0 ;
 
     if(cmd == NULL)
     {
         return -1;
     }
-    snprintf(cmd_tmp, sizeof(cmd_tmp), "%s 2>/dev/null; echo $?", cmd);
-
-    fp = popen(cmd_tmp, "r");
+    
+    snprintf(buf_tmp, sizeof(buf_tmp), "%s 2>/dev/null; echo $?", cmd);
+    fp = popen(buf_tmp, "r");
     if(fp == NULL)
     {
         return -1;
     }
 
-    while(fgets(buf_tmp, sizeof(buf_tmp), fp))
+    while(1)
     {
-        if(buf_remain_len > 0)
+        char_tmp = fgetc(fp);
+        if(EOF == char_tmp)
         {
-            buf_tmp_len = strlen(buf_tmp);
-            buf_write_len = (buf_remain_len < buf_tmp_len) ? buf_remain_len : buf_tmp_len ;
-            strncat(buf, buf_tmp, buf_write_len);
-            buf_remain_len -= buf_write_len;
+            ret = atoi(buf_tmp);
+            break;
+        }
+
+        if(buf_tmp_index < sizeof(buf_tmp) - 1)
+        {
+            buf_tmp[buf_tmp_index++] = char_tmp;
+        }
+        
+        if(char_tmp == '\n')
+        {
+            if(func) func(buf_tmp);
+            buf_tmp_index = 0;
+            memset(buf_tmp, 0, sizeof(buf_tmp));
+            continue;
         }
     }
-
-    ret = atoi(buf_tmp);
-    *len_ptr -= buf_remain_len;
-    buf[*len_ptr] = '\0';
-
+    
     pclose(fp);
 
     return ret;
     
 }
 
+static void print_buf(char *buf)
+{
+    printf("SHELL-INFO: %s", buf);
+}
+
 int main()
 {
     int ret = 0;
-    char buf[1024] = {0};
-    int len = sizeof(buf);
 
-    ret = exec_shell("ping 12.13.13.13 -c 2", buf, &len);
+    ret = exec_shell("ping www.baidu.com -c 2", &print_buf);
 
-    printf("ret = %d, len = %d\n", ret, len);
-    printf("%s\n", buf);
+    printf("ret = %d\n", ret);
 
     return 0;
 }
