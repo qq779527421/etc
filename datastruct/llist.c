@@ -90,24 +90,29 @@ void llist_roll(struct node_st *list)
         p->pre = p->next;
         p->next = r;
     }
-        r = p->pre;
-        p->pre = p->next;
-        p->next = r;
+    r = p->pre;
+    p->pre = p->next;
+    p->next = r;
 }
 
 
 
-int main()
+int main(int argc, char *argv[])
 {
-    char arr[] = "ab";
     int i;
     struct node_st *list;
 
-    if(-1 == llist_creat(&list))
-    return -1;
+    if(argc != 2 )
+    {
+        printf("Usage: %s STRING\n", argv[0]);
+        return -1;
+    }
     
-    for(i = 0; i < strlen(arr); i++){
-        llist_insert(list, &arr[i], DIR_FRONT);
+    if(-1 == llist_creat(&list))
+        return -1;
+    
+    for(i = 0; i < strlen(argv[1]); i++){
+        llist_insert(list, &argv[1][i], DIR_FRONT);
     }
 
     llist_travel(list, NULL);
